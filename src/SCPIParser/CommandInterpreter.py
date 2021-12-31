@@ -1,5 +1,5 @@
 
-from lark import Lark
+from lark import Lark,Token
 from QueryHandler import QueryHandler
 from CommandHandler import PrintHandler
 from QueryHandler import IDNHandler
@@ -7,7 +7,7 @@ from QueryHandler import IDNHandler
 class CommandInterpreter:
 
     SCPI_GRAMMAR = """
-        start: program_message_unit ( PROGRAM_MESSAGE_SEPARATOR program_message_unit )*
+        start: program_message_unit ( PROGRAM_MESSAGE_SEPARATOR WS_INLINE? program_message_unit )*
         program_message_unit: command_message_unit | query_message_unit
         command_message_unit: command_program_header [ WS_INLINE program_data ( PROGRAM_DATA_SEPARATOR program_data )*]
         query_message_unit: query_program_header ( WS_INLINE program_data (PROGRAM_DATA_SEPARATOR program_data )*)?
@@ -101,10 +101,10 @@ class CommandInterpreter:
 
     def process_line(self, command_string):
         parse_tree = self.parser.parse(command_string)
-        parse_tree = parse_tree.children[0]
         results = ""
         for command in parse_tree.children:
-            results += self._process(command) + "\n"
+            if not isinstance(command,Token):
+                results += self._process(command.children[0]) + "\n"
         return results
 
     def _process(self,command):

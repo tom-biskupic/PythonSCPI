@@ -66,5 +66,17 @@ class CommandInterpreterTest(unittest.TestCase):
     #     self.assertEqual(fixture.process_line("SOMFUNC 12.4MHz"),"Ok\n")
     #     mock_handler.set.assert_called_with("SOMFUNC",12.4)
 
+    def test_multiple_commands(self):
+        mock_handler1 = Mock()
+        mock_handler2 = Mock()
+        fixture = CommandInterpreter()
+        mock_handler1.set.return_value = "Ok"
+        mock_handler2.set.return_value = "Ok"
+        fixture.register_command_handler("SOMFUNC",mock_handler1)
+        fixture.register_command_handler("SOMEOTHERFUNC",mock_handler2)
+        self.assertEqual(fixture.process_line("SOMFUNC 12.4; SOMEOTHERFUNC 10.0"),"Ok\nOk\n")
+        mock_handler1.set.assert_called_with("SOMFUNC",12.4)
+        mock_handler2.set.assert_called_with("SOMEOTHERFUNC",10.0)
+
 if __name__ == '__main__':
     unittest.main()
