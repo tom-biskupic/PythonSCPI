@@ -1,8 +1,14 @@
 
 from lark import Lark,Token
-from QueryHandler import QueryHandler
-from CommandHandler import PrintHandler
-from QueryHandler import IDNHandler
+if __package__:
+    from .QueryHandler import QueryHandler
+    from .CommandHandler import PrintHandler
+    from .QueryHandler import IDNHandler
+else:
+    from QueryHandler import QueryHandler
+    from CommandHandler import PrintHandler
+    from QueryHandler import IDNHandler
+
 
 class CommandInterpreter:
 
@@ -114,7 +120,7 @@ class CommandInterpreter:
             return self._process_command(command)
 
     def _process_query(self,command):
-        print("Query = "+str(command))
+        # print("Query = "+str(command))
         query_name = ""  
         if command.data == 'compound_query_program_header':
             query_name = self._join_compound_name(command.children)
@@ -125,15 +131,15 @@ class CommandInterpreter:
             query_name = command.children[0].children[0]
 
         if query_name in self.query_handlers:
-            print("Processing query - "+query_name)
+            # print("Processing query - "+query_name)
             handler = self.query_handlers[query_name]
             return handler.query(query_name)
         else:
-            print("No handler for query "+query_name)
+            # print("No handler for query "+query_name)
             return "Invalid query"
 
     def _process_command(self,command):
-        print("Command = "+str(command))
+        # print("Command = "+str(command))
         header = command.children[0].children[0]
         if header.data == 'compound_command_program_header':
             command_name = self._join_compound_name(header.children)
@@ -141,7 +147,7 @@ class CommandInterpreter:
             command_name = header.children[0].value
 
         if command_name in self.command_handlers:
-            print("Processing command - "+command_name)
+            # print("Processing command - "+command_name)
             handler = self.command_handlers[command_name]
 
             if command.children[2].data == 'program_data':
@@ -154,7 +160,7 @@ class CommandInterpreter:
             return "Invalid query"
 
     def _parse_program_data(self,program_data):
-        print(program_data)
+        # print(program_data)
         arg_type = program_data.children[0].type
         arg_value = program_data.children[0].value
         if arg_type == 'DECIMAL_NUMERIC_PROGRAM_DATA':
@@ -193,7 +199,7 @@ class CommandInterpreter:
             compound_name += name
         return compound_name
 
-ci = CommandInterpreter()
+#ci = CommandInterpreter()
 # ci.register_command_handler("SOURCE:VOLTAGE",PrintHandler())
 
 # print(ci.process_line("*IDN?"))
@@ -202,4 +208,4 @@ ci = CommandInterpreter()
 # # print(ci.process_line("*SRE 128"))
 # # print(ci.process_line(":SENSe:TINTerval:ARM:ESTOP:LAYer1:TIMer 10.0MHz"))
 # # print(ci.process_line(":STAT:OPER:PTR 0; NTR 16"))
-print(ci.process_line("SOURCE:VOLTAGE 2.0e-2"))
+#print(ci.process_line("SOURCE:VOLTAGE 2.0e-2"))

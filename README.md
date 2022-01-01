@@ -14,7 +14,35 @@ The parser does not presently support:
 
 ## Example
 
-```python
+The following is a simple example that creates a handler that can be used to set/get the source voltage of a device. The interpreter is configured with the init string of the device which pre-defines the response to the IDN command.
 
-from SCPIParser import 
+The query method is called to fetch the value of the voltage and the set method sets it.
+
+```python
+from SCPIParser.CommandInterpreter import CommandInterpreter
+from SCPIParser.CommandHandler import CommandHandler
+from SCPIParser.QueryHandler import QueryHandler
+
+class VoltageHandler(QueryHandler,CommandHandler):
+    def __init__(self):
+        self.someValue = 12.4
+
+    def query(self,program_header):
+        return str(self.someValue)
+
+    def set(self,program_header,program_data):
+        self.someValue=program_data
+        return "Ok"
+
+ci = CommandInterpreter(manufacturer='TestInstrumentMaker',model='TestInstrument1',serial='0',firmware_version='0.1')
+
+vh = VoltageHandler()
+
+ci.register_query_handler("SOURCE:VOLTAGE",vh)
+ci.register_command_handler("SOURCE:VOLTAGE",vh)
+
+print(ci.process_line("*IDN?"))
+print(ci.process_line("SOURCE:VOLTAGE?"))
+print(ci.process_line("SOURCE:VOLTAGE 5.4e-3"))
+print(ci.process_line("SOURCE:VOLTAGE?"))
 ```

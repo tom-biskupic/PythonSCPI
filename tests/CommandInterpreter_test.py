@@ -1,6 +1,10 @@
 import unittest
 
 from context import CommandInterpreter
+# sys.path.append('../src/SCPIParser')
+# from ..src.SCPIParser.CommandInterpreter import CommandInterpreter
+# from ..src.SCPIParser.CommandHandler import CommandHandler
+# from ..src.SCPIParser.QueryHandler import QueryHandler
 
 from unittest.mock import patch
 from unittest.mock import mock_open, Mock, MagicMock
