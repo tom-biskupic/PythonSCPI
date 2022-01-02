@@ -1,5 +1,7 @@
 
 from lark import Lark,Token
+from lark.exceptions import UnexpectedInput
+
 if __package__:
     from .QueryHandler import QueryHandler
     from .CommandHandler import PrintHandler
@@ -106,7 +108,12 @@ class CommandInterpreter:
 
 
     def process_line(self, command_string):
-        parse_tree = self.parser.parse(command_string)
+        if not command_string or command_string.isspace():
+            return "\n"
+        try:
+            parse_tree = self.parser.parse(command_string)
+        except UnexpectedInput as err:
+            return str(err) + err.get_context(text=command_string,span=200)
         results = ""
         for command in parse_tree.children:
             if not isinstance(command,Token):
@@ -128,7 +135,7 @@ class CommandInterpreter:
             # print("Processing common query - \""+str(command.children[0])+"\"")
             query_name = str(command.children[0])
         else:
-            query_name = command.children[0].children[0]
+            query_name = command.children[0]
 
         if query_name in self.query_handlers:
             # print("Processing query - "+query_name)
@@ -156,8 +163,8 @@ class CommandInterpreter:
                 arg = "no Idea"
             return handler.set(command_name,arg)
         else:
-            print("No handler for query "+command_name)
-            return "Invalid query"
+            #print("No handler for query "+command_name)
+            return "Invalid command"
 
     def _parse_program_data(self,program_data):
         # print(program_data)
@@ -209,3 +216,4 @@ class CommandInterpreter:
 # # print(ci.process_line(":SENSe:TINTerval:ARM:ESTOP:LAYer1:TIMer 10.0MHz"))
 # # print(ci.process_line(":STAT:OPER:PTR 0; NTR 16"))
 #print(ci.process_line("SOURCE:VOLTAGE 2.0e-2"))
+#print(ci.process_line("this is junk"))

@@ -19,7 +19,27 @@ class CommandInterpreterTest(unittest.TestCase):
         fixture = CommandInterpreter("TestOrg","TestModel","12.0","1.0")
         self.assertEqual(fixture.process_line("*IDN?"),"TestOrg,TestModel,12.0,1.0\n")
 
+    def test_no_query_handler(self):
+        fixture = CommandInterpreter()
+        self.assertEqual(fixture.process_line("something?"),"Invalid query\n")
+
+    def test_syntax_error(self):
+        fixture = CommandInterpreter()
+        self.assertEqual(fixture.process_line("This is crap")[0:19],"No terminal matches")
+
+    def test_empty(self):
+        fixture = CommandInterpreter()
+        self.assertEqual(fixture.process_line("\t\t\t  "),"\n")
+
     def test_user_query_handler(self):
+        mock_handler = Mock()
+        fixture = CommandInterpreter()
+        mock_handler.query.return_value = "12.4"
+        fixture.register_query_handler("VOLT",mock_handler)
+        self.assertEqual(fixture.process_line("VOLT?"),"12.4\n")
+        mock_handler.query.assert_called_with("VOLT")
+
+    def test_compound_user_query_handler(self):
         mock_handler = Mock()
         fixture = CommandInterpreter()
         mock_handler.query.return_value = "12.4"
