@@ -7,6 +7,7 @@ Currently PythonSCPI implements:
 * Parsing of common program headers such as *IDN? etc although the implementation is left up to the caller
 * Parsing of basic program data including numerical data, string data, hex, octal and binary.
 * Multiple commands per line separated by semicolon
+* Abbreviations for command/query header values.
 
 The parser does not presently support:
 * Suffix data such as units (MHz). These will parse ok but will be ignorred.
@@ -19,9 +20,9 @@ The following is a simple example that creates a handler that can be used to set
 The query method is called to fetch the value of the voltage and the set method sets it.
 
 ```python
-from SCPIParser.CommandInterpreter import CommandInterpreter
-from SCPIParser.CommandHandler import CommandHandler
-from SCPIParser.QueryHandler import QueryHandler
+from scpiparser.CommandInterpreter import CommandInterpreter
+from scpiparser.CommandHandler import CommandHandler
+from scpiparser.QueryHandler import QueryHandler
 
 class VoltageHandler(QueryHandler,CommandHandler):
     def __init__(self):
@@ -38,11 +39,11 @@ ci = CommandInterpreter(manufacturer='TestInstrumentMaker',model='TestInstrument
 
 vh = VoltageHandler()
 
-ci.register_query_handler("SOURCE:VOLTAGE",vh)
-ci.register_command_handler("SOURCE:VOLTAGE",vh)
+ci.register_query_handler("SOURCE:VOLTage",vh)
+ci.register_command_handler("SOURCE:VOLTage",vh)
 
 print(ci.process_line("*IDN?"))
 print(ci.process_line("SOURCE:VOLTAGE?"))
 print(ci.process_line("SOURCE:VOLTAGE 5.4e-3"))
-print(ci.process_line("SOURCE:VOLTAGE?"))
+print(ci.process_line("SOURCE:VOLT?"))
 ```

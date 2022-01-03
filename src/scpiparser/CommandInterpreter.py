@@ -6,10 +6,12 @@ if __package__:
     from .QueryHandler import QueryHandler
     from .CommandHandler import PrintHandler
     from .QueryHandler import IDNHandler
+    from .HandlerMap import HandlerMap
 else:
     from QueryHandler import QueryHandler
     from CommandHandler import PrintHandler
     from QueryHandler import IDNHandler
+    from HandlerMap import HandlerMap
 
 
 class CommandInterpreter:
@@ -95,17 +97,16 @@ class CommandInterpreter:
         # print(self.SCPI_GRAMMAR)
         # self.parser = Lark(self.SCPI_GRAMMAR, parser='earley', lexer="standard")
         self.parser = Lark(self.SCPI_GRAMMAR)
-        self.command_handlers = {}
-        self.query_handlers = {}
+        self.command_handlers = HandlerMap()
+        self.query_handlers = HandlerMap()
         self.register_query_handler("IDN",IDNHandler(manufacturer,model,serial,firmware_version))
         pass
 
     def register_command_handler(self,key,handler):
-        self.command_handlers[key] = handler
+        self.command_handlers.register_handler(key,handler)
 
     def register_query_handler(self,key,handler):
-        self.query_handlers[key] = handler
-
+        self.query_handlers.register_handler(key,handler)
 
     def process_line(self, command_string):
         if not command_string or command_string.isspace():
@@ -137,9 +138,8 @@ class CommandInterpreter:
         else:
             query_name = command.children[0]
 
-        if query_name in self.query_handlers:
-            # print("Processing query - "+query_name)
-            handler = self.query_handlers[query_name]
+        handler = self.query_handlers.find_handler(query_name)
+        if handler:
             return handler.query(query_name)
         else:
             # print("No handler for query "+query_name)
@@ -153,10 +153,8 @@ class CommandInterpreter:
         else:
             command_name = header.children[0].value
 
-        if command_name in self.command_handlers:
-            # print("Processing command - "+command_name)
-            handler = self.command_handlers[command_name]
-
+        handler = self.command_handlers.find_handler(command_name)
+        if handler:
             if command.children[2].data == 'program_data':
                 arg = self._parse_program_data(command.children[2])
             else:
