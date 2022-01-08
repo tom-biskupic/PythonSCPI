@@ -13,6 +13,18 @@ else:
     from QueryHandler import IDNHandler
     from HandlerMap import HandlerMap
 
+class ParserContext:
+    def __init__(self):
+        self.is_first = True
+        self.command_scope = ""
+    def get_is_first(self):
+        return self.is_first
+    def set_is_first(self,value):
+        self.is_first = value
+    def get_command_scope(self):
+        return self.command_scope
+    def set_command_scope(self,value):
+        self.command_scope = value
 
 class CommandInterpreter:
 
@@ -31,22 +43,22 @@ class CommandInterpreter:
         //              | arbitrary_block_program_data
         //              | expression_program_data
                         
-        command_program_header: WS_INLINE? simple_command_program_header 
-                                | compound_command_program_header 
-                                | common_command_program_header
+        command_program_header: WS_INLINE? SIMPE_COMMAND_PROGRAM_HEADER 
+                                | COMPOUND_COMMAND_PROGRAM_HEADER 
+                                | COMMON_COMMAND_PROGRAM_HEADER
                                 
-        simple_command_program_header: PROGRAM_MNEMONIC
+        SIMPE_COMMAND_PROGRAM_HEADER: PROGRAM_MNEMONIC
         
-        compound_command_program_header: ":"? PROGRAM_MNEMONIC ( ":" PROGRAM_MNEMONIC )+
-        common_command_program_header: "*" PROGRAM_MNEMONIC
+        COMPOUND_COMMAND_PROGRAM_HEADER: ":"? PROGRAM_MNEMONIC ( ":" PROGRAM_MNEMONIC )+
+        COMMON_COMMAND_PROGRAM_HEADER: "*" PROGRAM_MNEMONIC
         
-        query_program_header:   WS_INLINE? simple_query_program_header
-                                | compound_query_program_header
-                                | common_query_program_header
+        query_program_header:   WS_INLINE? SIMPLE_QUERY_PROGRAM_HEADER
+                                | COMPOUND_QUERY_PROGRAM_HEADER
+                                | COMMON_QUERY_PROGRAM_HEADER
                                 
-        simple_query_program_header: PROGRAM_MNEMONIC "?"
-        compound_query_program_header: ":"? PROGRAM_MNEMONIC (":" PROGRAM_MNEMONIC)+ "?"
-        common_query_program_header: "*" PROGRAM_MNEMONIC "?"
+        SIMPLE_QUERY_PROGRAM_HEADER: PROGRAM_MNEMONIC "?"
+        COMPOUND_QUERY_PROGRAM_HEADER: ":"? PROGRAM_MNEMONIC (":" PROGRAM_MNEMONIC)+ "?"
+        COMMON_QUERY_PROGRAM_HEADER: "*" PROGRAM_MNEMONIC "?"
         
         
         character_program_data: PROGRAM_MNEMONIC
@@ -99,7 +111,7 @@ class CommandInterpreter:
         self.parser = Lark(self.SCPI_GRAMMAR)
         self.command_handlers = HandlerMap()
         self.query_handlers = HandlerMap()
-        self.register_query_handler("IDN",IDNHandler(manufacturer,model,serial,firmware_version))
+        self.register_query_handler("*IDN",IDNHandler(manufacturer,model,serial,firmware_version))
         pass
 
     def register_command_handler(self,key,handler):
@@ -116,27 +128,28 @@ class CommandInterpreter:
         except UnexpectedInput as err:
             return str(err) + err.get_context(text=command_string,span=200)
         results = ""
+        context = ParserContext()
         for command in parse_tree.children:
             if not isinstance(command,Token):
-                results += self._process(command.children[0]) + "\n"
+                results += self._process(command.children[0],context) + "\n"
+                context.set_is_first(False)
         return results
 
-    def _process(self,command):
+    def _process(self,command,context):
         if command.data == 'query_message_unit':
-            return self._process_query(command.children[0].children[0])
+            return self._process_query(command.children[0].children[0],context)
         else:
-            return self._process_command(command)
+            return self._process_command(command,context)
 
-    def _process_query(self,command):
+    def _process_query(self,query,context):
         # print("Query = "+str(command))
-        query_name = ""  
-        if command.data == 'compound_query_program_header':
-            query_name = self._join_compound_name(command.children)
-        elif command.data == 'common_query_program_header':
-            # print("Processing common query - \""+str(command.children[0])+"\"")
-            query_name = str(command.children[0])
-        else:
-            query_name = command.children[0]
+        query_name = query.value[:-1]
+        if context.get_is_first():
+            query_parts = query_name.split(":")
+            context.set_command_scope(":".join(query_parts[:-1]))
+
+        if not context.get_is_first() and context.get_command_scope() and query_name[0] != ":":
+            query_name = context.get_command_scope() + ":" + query_name
 
         handler = self.query_handlers.find_handler(query_name)
         if handler:
@@ -145,14 +158,20 @@ class CommandInterpreter:
             # print("No handler for query "+query_name)
             return "Invalid query"
 
-    def _process_command(self,command):
+    def _process_command(self,command,context):
         # print("Command = "+str(command))
-        header = command.children[0].children[0]
-        if header.data == 'compound_command_program_header':
-            command_name = self._join_compound_name(header.children)
-        else:
-            command_name = header.children[0].value
+        header_token = command.children[0].children[0]
+        command_name = header_token.value
+        if context.get_is_first():
+            query_parts = command_name.split(":")
+            context.set_command_scope(":".join(query_parts[:-1]))
 
+        if not context.get_is_first() and context.get_command_scope() and command_name[0] != ":":
+            command_name = context.get_command_scope() + ":" + command_name
+        
+        if command_name[0] == ":":
+            command_name = command_name[1:]
+            
         handler = self.command_handlers.find_handler(command_name)
         if handler:
             if command.children[2].data == 'program_data':

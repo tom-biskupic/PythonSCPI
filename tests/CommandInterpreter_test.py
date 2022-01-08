@@ -98,5 +98,41 @@ class CommandInterpreterTest(unittest.TestCase):
         mock_handler1.set.assert_called_with("SOMFUNC",12.4)
         mock_handler2.set.assert_called_with("SOMEOTHERFUNC",10.0)
 
+    def test_multiple_queries_with_context(self):
+        mock_handler1 = Mock()
+        mock_handler2 = Mock()
+        fixture = CommandInterpreter()
+        mock_handler1.query.return_value = "10.0"
+        mock_handler2.query.return_value = "12.0"
+        fixture.register_query_handler("SOURCE:VOLTAGE",mock_handler1)
+        fixture.register_query_handler("SOURCE:CURRENT",mock_handler2)
+        self.assertEqual(fixture.process_line("SOURCE:VOLTAGE?; CURRENT?"),"10.0\n12.0\n")
+        mock_handler1.query.assert_called_with("SOURCE:VOLTAGE")
+        mock_handler2.query.assert_called_with("SOURCE:CURRENT")
+
+    def test_multiple_commands_with_context(self):
+        mock_handler1 = Mock()
+        mock_handler2 = Mock()
+        fixture = CommandInterpreter()
+        mock_handler1.set.return_value = "Ok"
+        mock_handler2.set.return_value = "Ok"
+        fixture.register_command_handler("SOURCE:VOLTAGE",mock_handler1)
+        fixture.register_command_handler("SOURCE:CURRENT",mock_handler2)
+        self.assertEqual(fixture.process_line("SOURCE:VOLTAGE 12.4; CURRENT 10.0"),"Ok\nOk\n")
+        mock_handler1.set.assert_called_with("SOURCE:VOLTAGE",12.4)
+        mock_handler2.set.assert_called_with("SOURCE:CURRENT",10.0)
+
+    def test_multiple_commands_with_context_override(self):
+        mock_handler1 = Mock()
+        mock_handler2 = Mock()
+        fixture = CommandInterpreter()
+        mock_handler1.set.return_value = "Ok"
+        mock_handler2.set.return_value = "Ok"
+        fixture.register_command_handler("SOURCE:VOLTAGE",mock_handler1)
+        fixture.register_command_handler("OUTPUT:ENABLE",mock_handler2)
+        self.assertEqual(fixture.process_line("SOURCE:VOLTAGE 12.4;:OUTPUT:ENABLE 1"),"Ok\nOk\n")
+        mock_handler1.set.assert_called_with("SOURCE:VOLTAGE",12.4)
+        mock_handler2.set.assert_called_with("OUTPUT:ENABLE",1)
+
 if __name__ == '__main__':
     unittest.main()
