@@ -120,7 +120,7 @@ class CommandInterpreter:
     def register_query_handler(self,key,handler):
         self.query_handlers.register_handler(key,handler)
 
-    def process_line(self, command_string):
+    def process_line(self, command_string, call_context=None):
         if not command_string or command_string.isspace():
             return "\n"
         try:
@@ -131,17 +131,17 @@ class CommandInterpreter:
         context = ParserContext()
         for command in parse_tree.children:
             if not isinstance(command,Token):
-                results += self._process(command.children[0],context) + "\n"
+                results += self._process(command.children[0],context,call_context) + "\n"
                 context.set_is_first(False)
         return results
 
-    def _process(self,command,context):
+    def _process(self,command,context,call_context):
         if command.data == 'query_message_unit':
-            return self._process_query(command.children[0].children[0],context)
+            return self._process_query(command.children[0].children[0],context,call_context)
         else:
-            return self._process_command(command,context)
+            return self._process_command(command,context,call_context)
 
-    def _process_query(self,query,context):
+    def _process_query(self,query,context,call_context):
         # print("Query = "+str(command))
         query_name = query.value[:-1]
         if context.get_is_first():
@@ -153,12 +153,15 @@ class CommandInterpreter:
 
         handler = self.query_handlers.find_handler(query_name)
         if handler:
-            return handler.query(query_name)
+            if call_context != None:
+                return handler.query(query_name,call_context)
+            else:
+                return handler.query(query_name)
         else:
             # print("No handler for query "+query_name)
             return "Invalid query"
 
-    def _process_command(self,command,context):
+    def _process_command(self,command,context,call_context):
         # print("Command = "+str(command))
         header_token = command.children[0].children[0]
         command_name = header_token.value
@@ -171,14 +174,18 @@ class CommandInterpreter:
         
         if command_name[0] == ":":
             command_name = command_name[1:]
-            
+
         handler = self.command_handlers.find_handler(command_name)
         if handler:
             if command.children[2].data == 'program_data':
                 arg = self._parse_program_data(command.children[2])
             else:
                 arg = "no Idea"
-            return handler.set(command_name,arg)
+
+            if call_context != None:
+                return handler.set(command_name,arg,call_context)
+            else:
+                return handler.set(command_name,arg)
         else:
             #print("No handler for query "+command_name)
             return "Invalid command"

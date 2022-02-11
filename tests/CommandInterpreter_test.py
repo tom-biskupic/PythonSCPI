@@ -35,6 +35,15 @@ class CommandInterpreterTest(unittest.TestCase):
         self.assertEqual(fixture.process_line("VOLT?"),"12.4\n")
         mock_handler.query.assert_called_with("VOLT")
 
+    def test_user_query_handler_with_call_context(self):
+        mock_handler = Mock()
+        mock_call_context = "Something"
+        fixture = CommandInterpreter()
+        mock_handler.query.return_value = "12.4"
+        fixture.register_query_handler("VOLT",mock_handler)
+        self.assertEqual(fixture.process_line("VOLT?",mock_call_context),"12.4\n")
+        mock_handler.query.assert_called_with("VOLT",mock_call_context)
+
     def test_compound_user_query_handler(self):
         mock_handler = Mock()
         fixture = CommandInterpreter()
@@ -69,6 +78,15 @@ class CommandInterpreterTest(unittest.TestCase):
 
     def test_user_set_handler_double_quoted_string_escaping(self):
         self._test_user_set_handler("\"hello \"\"Dolly\"\"\"",'hello \"Dolly\"')
+
+    def test_user_set_handler_with_context(self):
+        mock_handler = Mock()
+        mock_call_context = "sdfsdf"
+        fixture = CommandInterpreter()
+        mock_handler.set.return_value = "Ok"
+        fixture.register_command_handler("SOMFUNC",mock_handler)
+        self.assertEqual(fixture.process_line("SOMFUNC 12.4",mock_call_context),"Ok\n")
+        mock_handler.set.assert_called_with("SOMFUNC",12.4,mock_call_context)
 
     def _test_user_set_handler(self,string_value,expected_value):
         mock_handler = Mock()
